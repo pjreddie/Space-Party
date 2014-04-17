@@ -32,6 +32,8 @@
         android:text="SEND HAHAHAHA"
         android:id="@+id/button"
         android:layout_centerVertical="true"
-        android:layout_centerHorizontal="true" />
+        android:layout_centerHorizontal="true"
+        android:clickable="true"
+        android:enabled="true" />
 
 </RelativeLayout>
