@@ -30,12 +30,12 @@ public class XmitActivity extends ActionBarActivity {
     public short[] bell202_modulate(byte[] data, int samplesperbit, int hz){
         double mark_hz = 1200;
         double space_hz = 2200;
-        short[] wave = new short[data.length*4*samplesperbit];
+        short[] wave = new short[data.length*8*samplesperbit];
         double t = 0;
         int count = 0;
         for(int i = 0; i < data.length; ++i){
             byte b = data[i];
-            for(int j = 0; j < 4; ++j){
+            for(int j = 0; j < 8; ++j){
                 int bit = (b >> j) & 1;
                 for(int k = 0; k < samplesperbit; ++k){
                     double step = 1./hz;
@@ -62,7 +62,7 @@ public class XmitActivity extends ActionBarActivity {
             public void onClick(View arg0){
                 String m = text.getText().toString();
                 byte code[] = encode(m);
-                short wave[] = bell202_modulate(code, 2200, 44100);
+                short wave[] = bell202_modulate(code, 200, 44100);
                 AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 44100,
                         AudioFormat.CHANNEL_OUT_MONO,
                         AudioFormat.ENCODING_PCM_16BIT,
