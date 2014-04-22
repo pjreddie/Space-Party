@@ -18,6 +18,8 @@ import java.nio.ByteBuffer;
 
 
 public class XmitActivity extends ActionBarActivity {
+    public int TRANSMIT_HZ = 44100;
+    public int PREAMBLE_LENGTH=44100;
     public byte[] encode(String message){
         byte[] data = new byte[message.length() + 4];
         ByteBuffer b = ByteBuffer.allocate(4);
@@ -26,13 +28,34 @@ public class XmitActivity extends ActionBarActivity {
         System.arraycopy(message.getBytes(), 0, data, 4, message.length());
         return data;
     }
-
-    public short[] bell202_modulate(byte[] data, int samplesperbit, int hz){
-        double mark_hz = 1200;
-        double space_hz = 2200;
-        short[] wave = new short[data.length*8*samplesperbit];
+    public double get_freq(int note){
+        return Math.pow(2.0, (note)/12.0) * 440.0;
+    }
+    public short[] generate_preamble(){
+        int notes[] = {20,22,26,28};
+        short[] wave = new short[PREAMBLE_LENGTH];
         double t = 0;
         int count = 0;
+        for(int i = 0; i < PREAMBLE_LENGTH; ++i){
+            int note = notes[notes.length*i/PREAMBLE_LENGTH];
+
+            wave[count++] = (short)(Math.sin(t*Math.PI*2)*Short.MAX_VALUE);
+            t += get_freq(note)/TRANSMIT_HZ;
+        }
+        return wave;
+    }
+
+    public short[] bell202_modulate(byte[] data, int samplesperbit, int hz){
+        short preamble[] = generate_preamble();
+        double mark_hz = 1200;
+        double space_hz = 2200;
+        int min_buff = AudioTrack.getMinBufferSize(44100,
+                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT);
+        short[] wave = new short[Math.max(data.length*8*samplesperbit+preamble.length, min_buff)];
+        System.arraycopy(preamble, 0, wave, 0, preamble.length);
+        double t = 0;
+        int count = preamble.length;
         for(int i = 0; i < data.length; ++i){
             byte b = data[i];
             for(int j = 0; j < 8; ++j){
@@ -62,7 +85,8 @@ public class XmitActivity extends ActionBarActivity {
             public void onClick(View arg0){
                 String m = text.getText().toString();
                 byte code[] = encode(m);
-                short wave[] = bell202_modulate(code, 200, 44100);
+                short wave[] = bell202_modulate(code, 100, 44100);
+
                 AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 44100,
                         AudioFormat.CHANNEL_OUT_MONO,
                         AudioFormat.ENCODING_PCM_16BIT,
@@ -70,6 +94,8 @@ public class XmitActivity extends ActionBarActivity {
                         AudioTrack.MODE_STREAM);
                 audioTrack.play();
                 audioTrack.write(wave, 0, wave.length);
+                audioTrack.stop();
+
                 Log.v("EditText", m);
                 Log.v("Code", Arrays.toString(code));
                 //Log.v("Wave", Arrays.toString(wave));
