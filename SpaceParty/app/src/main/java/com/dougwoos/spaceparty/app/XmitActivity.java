@@ -19,7 +19,7 @@ import java.nio.ByteBuffer;
 
 public class XmitActivity extends ActionBarActivity {
     public int TRANSMIT_HZ = 44100;
-    public int PREAMBLE_LENGTH=44100;
+    public int PREAMBLE_LENGTH=1000;
     public byte[] encode(String message){
         byte[] data = new byte[message.length() + 4];
         ByteBuffer b = ByteBuffer.allocate(4);

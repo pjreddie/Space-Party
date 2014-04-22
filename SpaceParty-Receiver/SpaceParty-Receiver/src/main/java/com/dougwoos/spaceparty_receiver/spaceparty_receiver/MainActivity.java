@@ -18,12 +18,34 @@ import java.util.Arrays;
 
 public class MainActivity extends ActionBarActivity {
     // buffer size must be <= recorder buffer size
-    private static final int RECORDER_BUFFER_SIZE = 4096;
-    private static final int BUFFER_SIZE = 256;
+    private static final int RECORDER_BUFFER_SIZE = 44100;
+    private static final int BUFFER_SIZE = 3000;
+
+    public int TRANSMIT_HZ = 44100;
+    public int PREAMBLE_LENGTH=1000;
+    public double THRESHOLD = 100;
     private short[] buffer1 = new short[BUFFER_SIZE];
     private short[] buffer2 = new short[BUFFER_SIZE];
     private boolean lastRead1 = false;
     private boolean neverRead = true;
+
+    public double get_freq(int note){
+        return Math.pow(2.0, (note)/12.0) * 440.0;
+    }
+    public short[] generate_preamble(){
+        int notes[] = {20,22,26,28};
+        short[] wave = new short[PREAMBLE_LENGTH];
+        double t = 0;
+        int count = 0;
+        for(int i = 0; i < PREAMBLE_LENGTH; ++i){
+            int note = notes[notes.length*i/PREAMBLE_LENGTH];
+
+            wave[count++] = (short)(Math.sin(t*Math.PI*2)*Short.MAX_VALUE);
+            t += get_freq(note)/TRANSMIT_HZ;
+        }
+        return wave;
+    }
+    public short[] preamble = generate_preamble();
 
     AudioRecord recorder;
 
@@ -68,7 +90,21 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private int findPreamble() {
-        return -1;
+        short buffer[] = readFrom(0, BUFFER_SIZE*2);
+        double max_sum = THRESHOLD;
+        int max_i = -1;
+
+        for(int i = 0; i < buffer.length-preamble.length; ++i){
+            double sum = 0;
+            for(int j = 0; j < preamble.length; ++j){
+                sum += preamble[j]*buffer[i+j];
+            }
+            if(sum > max_sum){
+                max_sum = sum;
+                max_i = i;
+            }
+        }
+        return max_i;
     }
 
     private short[] readFrom(int start, int size) {
@@ -93,10 +129,11 @@ public class MainActivity extends ActionBarActivity {
     private void listen(TextView text) {
         int preambleIndex = -1;
         recorder.startRecording();
-        while (preambleIndex < 0) {
+        while (preambleIndex < 0 || true) {
             // spin while looking for the preamble
             poll();
             preambleIndex = findPreamble();
+            Log.v("Found Preamble", String.valueOf(preambleIndex));
         }
         short[] msgLengthBuf = readFrom(preambleIndex, 2);
         int length = (((int)msgLengthBuf[0]) << 16) | msgLengthBuf[1];
