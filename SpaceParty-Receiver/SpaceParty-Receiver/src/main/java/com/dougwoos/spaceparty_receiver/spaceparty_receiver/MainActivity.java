@@ -35,7 +35,9 @@ public class MainActivity extends ActionBarActivity {
         recorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
                                    44100, AudioFormat.CHANNEL_IN_MONO,
                                    AudioFormat.ENCODING_PCM_16BIT,
-                                   RECORDER_BUFFER_SIZE);
+                                   Math.max(RECORDER_BUFFER_SIZE,
+                                           AudioRecord.getMinBufferSize(44100, AudioFormat.CHANNEL_IN_MONO,
+                                                   AudioFormat.ENCODING_PCM_16BIT)));
 
         
         Button button = (Button) findViewById(R.id.button);
