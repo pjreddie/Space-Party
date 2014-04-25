@@ -11,7 +11,6 @@ import android.view.View;
 public class DrawView extends View {
     Paint paint = new Paint();
     short[] wave;
-    short[] demod;
     int w;
     int h;
     @Override
@@ -26,25 +25,18 @@ public class DrawView extends View {
         paint.setColor(Color.BLACK);
     }
 
-    public void setShorts(short[] wave, short[] demod){
+    public void setShorts(short[] wave){
         this.wave = wave;
-        this.demod = demod;
     }
 
     @Override
     public void onDraw(Canvas canvas){
-        float scale_y = h/(4.0f*Short.MAX_VALUE);
-        float y = h/2.0f;
-        if(wave==null || demod==null) return;
+        float scale_y = h/(2.0f*Short.MAX_VALUE);
+        float y = h;
+        if(wave==null) return;
         for(int i = 0; i < wave.length; ++i){
             canvas.drawLine(i*w/wave.length, y/2.0f, i*w/wave.length, wave[i]*scale_y+y/2.0f, paint);
 
         }
-
-        for(int i = 0; i < demod.length; ++i){
-            canvas.drawLine(i*w/demod.length, y+y/2.0f, i*w/demod.length, y+y/2.0f+demod[i]*scale_y, paint);
-        }
-        canvas.drawLine(0,y,w,y,paint);
-
     }
 }

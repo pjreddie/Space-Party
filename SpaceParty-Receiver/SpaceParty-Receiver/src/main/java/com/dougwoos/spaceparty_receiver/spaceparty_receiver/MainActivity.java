@@ -9,13 +9,10 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.view.View;
 
-import java.nio.CharBuffer;
-import java.util.BitSet;
-import java.util.Vector;
+import java.util.Random;
+
 
 public class MainActivity extends ActionBarActivity {
     // buffer size must be <= recorder buffer size
@@ -29,28 +26,17 @@ public class MainActivity extends ActionBarActivity {
         }
         return bits;
     }
-    static String bits_to_string(short[] bits){
-        String s = "";
-        for(int i = 0; i < bits.length/8; ++i){
-            char c = 0;
-            for(int j = 0; j < 8; ++j){
-                if(bits[i*8+j] == 1) c = (char)(c+(1<<(7-j)));
-            }
-            s += c;
-        }
-        return s;
-    }
 
     public static int TRANSMIT_HZ = 44100;
     private static final int RECORDER_BUFFER_SIZE = 5*44100;
 
-    static String secret = "HaHA";
+    static String secret = "UaU";
     static short[] secret_bits = string_to_bits(secret);
 
     private static final int SAMPLES_PER_BIT = 74;
-    private static final int BITS_PER_READ = 10*secret_bits.length;
+    private static final int BYTES_PER_READ = 5*secret_bits.length/8;
+    private static final int BITS_PER_READ = BYTES_PER_READ*8;
     private static final int BITS_PER_BUFF = BITS_PER_READ*3;
-
 
     private static final int BUFFER_SIZE = SAMPLES_PER_BIT*BITS_PER_BUFF;
     private static final int READ_SIZE = SAMPLES_PER_BIT*BITS_PER_READ;
@@ -63,19 +49,24 @@ public class MainActivity extends ActionBarActivity {
     private static final float SPACE_CROSS = 2.0f*SPACE_HZ*SAMPLES_PER_BIT/TRANSMIT_HZ;
 
 
-    public int PREAMBLE_LENGTH=4000;
-    public double THRESHOLD = 10.0;
     private short[] buffer = new short[BUFFER_SIZE];
-    private short[] demod = new short[BUFFER_SIZE];
     private short[] decode = new short[BITS_PER_READ + secret_bits.length];
-    private short[] received_bits;
+    private byte[] received_bytes;
+
 
     private int index = 0;
     private int read_index = -1;
 
-    public double get_freq(int note){
-        return Math.pow(2.0, (note)/12.0) * 440.0;
+    public byte[] random_bytes(int len){
+        Random r = new Random(0);
+        byte[] bytes = new byte[len];
+        r.nextBytes(bytes);
+        return bytes;
     }
+
+    public int random_length = 1000;
+    public byte[] random_bytes = random_bytes(random_length);
+
 
     AudioRecord recorder;
     DrawView drawView;
@@ -107,7 +98,7 @@ public class MainActivity extends ActionBarActivity {
 
         drawView = (DrawView) findViewById(R.id.draw);
         drawView.setBackgroundColor(Color.WHITE);
-        drawView.setShorts(buffer, demod);
+        drawView.setShorts(buffer);
 
         new Thread(new Runnable(){
                     public void run(){
@@ -119,9 +110,10 @@ public class MainActivity extends ActionBarActivity {
 
     void find_secret(){
         read_left = -1;
-        Vector<Integer> offsets = new Vector<Integer>();
+        int sum = 0;
+        int count = 0;
 
-        for(int offset = 0; offset < SAMPLES_PER_BIT; offset += SAMPLES_PER_BIT/30){
+        for(int offset = 0; offset < SAMPLES_PER_BIT; offset += 2){
             int start_index = index - READ_SIZE - secret_bits.length + offset;
             for(int i = 0; i < BITS_PER_READ+secret_bits.length; ++i){
                 decode[i] = decode(start_index+i*SAMPLES_PER_BIT);
@@ -136,12 +128,17 @@ public class MainActivity extends ActionBarActivity {
                     }
                 }
                 if (match==1){
-                    offsets.add(i*SAMPLES_PER_BIT+start_index);
+                    int next = i*SAMPLES_PER_BIT + start_index;
+                    if(count == 0 || Math.abs(sum/count-next) < SAMPLES_PER_BIT){
+                        sum += next;
+                        ++count;
+                    }
                 }
             }
         }
-        if(offsets.size() > 0) {
-            read_index = (offsets.get(offsets.size()/2) + secret_bits.length*SAMPLES_PER_BIT + BUFFER_SIZE)%BUFFER_SIZE;
+        if(count > 0) {
+            Log.v("Count:", String.valueOf(count));
+            read_index = (sum/count + secret_bits.length*SAMPLES_PER_BIT + BUFFER_SIZE)%BUFFER_SIZE;
         }
     }
 
@@ -153,28 +150,52 @@ public class MainActivity extends ActionBarActivity {
             if(bit == 1)s += "1";
             else s +="0";
         }
-        read_left = Integer.parseInt(s, 2)*8;
+        if(s.charAt(0) == '1' || Integer.parseInt(s,2) > 1000000){
+            Log.v("Rejecting", "Malformed or Too Long!");
+            read_index = -1;
+            return;
+        }
+        read_left = Integer.parseInt(s, 2);
         Log.v("Message Length", String.valueOf(read_left));
-        received_bits = new short[read_left];
+        received_bytes = new byte[read_left];
     }
+
+    void read_byte(){
+        int byte_index = received_bytes.length - read_left;
+        byte b = 0;
+        for(int i = 0; i < 8; ++i){
+            short bit = decode(read_index);
+            read_index = (read_index+SAMPLES_PER_BIT)%buffer.length;
+            if(bit == 1) b = (byte)(b|1<<(7-i));
+        }
+        received_bytes[byte_index] = b;
+        --read_left;
+    }
+
     void read_message(){
         int count = 0;
-        while(count < BITS_PER_READ && read_left > 0){
-            received_bits[received_bits.length-read_left] = decode(read_index);
-            read_index = (read_index + SAMPLES_PER_BIT)%buffer.length;
-            --read_left;
+        while(count < BYTES_PER_READ && read_left > 0){
+            read_byte();
             ++count;
         }
         if(read_left == 0){
             read_index = -1;
-            Log.v("Message!!:", bits_to_string(received_bits));
+            if(received_bytes.length == random_length){
+                int errors = 0;
+                for(int i = 0; i < random_length; ++i){
+                    int diff = ((received_bytes[i]&0xff)^(random_bytes[i]&0xff));
+                    errors += Integer.bitCount(diff);
+                }
+                Log.v("Error Rate:", String.format("%f%%",100.*errors/(random_length*8.)));
+            }else{
+                Log.v("Message!!:", new String(received_bytes));
+            }
         }
     }
 
     private void poll() {
-        int space = Math.min(buffer.length - index, READ_SIZE);
-        recorder.read(buffer, index, space);
-        index = (index + space)%buffer.length;
+        recorder.read(buffer, index, READ_SIZE);
+        index = (index + READ_SIZE)%buffer.length;
 
         if(read_index < 0) find_secret();
         else if(read_left <= 0) read_header();
