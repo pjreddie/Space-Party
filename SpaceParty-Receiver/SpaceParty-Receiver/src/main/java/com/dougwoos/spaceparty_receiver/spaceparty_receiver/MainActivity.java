@@ -36,7 +36,7 @@ public class MainActivity extends ActionBarActivity {
     private static final int SAMPLES_PER_BIT = 74;
     private static final int BYTES_PER_READ = 5*secret_bits.length/8;
     private static final int BITS_PER_READ = BYTES_PER_READ*8;
-    private static final int BITS_PER_BUFF = BITS_PER_READ*3;
+    private static final int BITS_PER_BUFF = BITS_PER_READ*5;
 
     private static final int BUFFER_SIZE = SAMPLES_PER_BIT*BITS_PER_BUFF;
     private static final int READ_SIZE = SAMPLES_PER_BIT*BITS_PER_READ;
@@ -113,7 +113,7 @@ public class MainActivity extends ActionBarActivity {
         int sum = 0;
         int count = 0;
 
-        for(int offset = 0; offset < SAMPLES_PER_BIT; offset += 2){
+        for(int offset = 0; offset < SAMPLES_PER_BIT; offset += SAMPLES_PER_BIT/20){
             int start_index = index - READ_SIZE - secret_bits.length + offset;
             for(int i = 0; i < BITS_PER_READ+secret_bits.length; ++i){
                 decode[i] = decode(start_index+i*SAMPLES_PER_BIT);
@@ -189,6 +189,7 @@ public class MainActivity extends ActionBarActivity {
                 Log.v("Error Rate:", String.format("%f%%",100.*errors/(random_length*8.)));
             }else{
                 Log.v("Message!!:", new String(received_bytes));
+                this.text.setText(new String(received_bytes));
             }
         }
     }
@@ -203,12 +204,15 @@ public class MainActivity extends ActionBarActivity {
 
         drawView.postInvalidate();
     }
-
+int log = 0;
     private short decode(int index)
     {
         int count = 0;
         for(int i = index; i < index+SAMPLES_PER_BIT; ++i){
             if((buffer[(i-1+2*buffer.length)%buffer.length]<0) != (buffer[(i+2*buffer.length)%buffer.length]<0)) ++count;
+        }
+        if(++log%100000 == 0){
+            Log.v("Count", String.valueOf(count));
         }
         if(Math.abs(count-MARK_CROSS) < Math.abs(count-SPACE_CROSS)){
             return 1;
