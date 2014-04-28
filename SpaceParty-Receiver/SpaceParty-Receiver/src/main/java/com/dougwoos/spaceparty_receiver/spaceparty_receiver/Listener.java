@@ -82,8 +82,8 @@ public class Listener {
         int count = 0;
 
         for(int offset = 0; offset < SAMPLES_PER_BIT; offset++){
-            int start_index = index - READ_SIZE - secret_bits.length + offset;
-            for(int i = 0; i < BITS_PER_READ+secret_bits.length; ++i){
+            int start_index = index - READ_SIZE - (secret_bits.length * SAMPLES_PER_BIT) + offset;
+            for(int i = 0; i < BITS_PER_READ + secret_bits.length; ++i){
                 decode[i] = decode(start_index+i*SAMPLES_PER_BIT);
             }
 
