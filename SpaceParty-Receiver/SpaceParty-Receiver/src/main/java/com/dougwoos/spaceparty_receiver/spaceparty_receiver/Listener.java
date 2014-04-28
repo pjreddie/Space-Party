@@ -6,8 +6,12 @@ import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaRecorder;
 import android.os.Build;
+import android.os.Environment;
 import android.util.Log;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Random;
@@ -67,11 +71,31 @@ public class Listener {
     public int random_length = 1000;
     public byte[] random_bytes = random_bytes(random_length);
 
-
+    public int SHORTS_TO_LOG = READ_SIZE * 50;
+    int shorts_logged = 0;
     AudioRecord recorder;
+    File file;
+    FileOutputStream stream;
 
     public Listener() {
         Log.v("initializing listener", "wooooo");
+        Log.v("writing", "data");
+        File sdCard = Environment.getExternalStorageDirectory();
+        File dir = new File (sdCard.getAbsolutePath() + "/Android/data/audio");
+        boolean success = dir.mkdirs();
+        if (!success) {
+            Log.v("Failed to make directories :(", ":(");
+        }
+        file = new File(dir, "arraydata.txt");
+        try {
+            if (!file.exists()) {
+                file.createNewFile();
+            }
+            stream = new FileOutputStream(file);
+        } catch (Exception e) {
+            Log.v("File open error", e.toString());
+        }
+
         recorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
                                    TRANSMIT_HZ, AudioFormat.CHANNEL_IN_MONO,
                                    AudioFormat.ENCODING_PCM_16BIT,
@@ -80,8 +104,7 @@ public class Listener {
                                                                          AudioFormat.ENCODING_PCM_16BIT)));
     }
 
-        void find_secret(){
-
+    void find_secret(){
         read_left = -1;
         int sum = 0;
         int count = 0;
@@ -188,6 +211,23 @@ Random r = new Random();
     }*/
     private void poll() {
         recorder.read(buffer, index, READ_SIZE);
+        // do some logging
+        try {
+            if (shorts_logged < SHORTS_TO_LOG) {
+                for (int idx = index; idx < index + READ_SIZE; idx++) {
+                    stream.write(String.valueOf(buffer[idx % BUFFER_SIZE]).getBytes());
+                    stream.write("\n".getBytes());
+                    shorts_logged++;
+                }
+                stream.flush();
+                Log.v("logged some stuff", "woooo");
+            } else {
+                stream.close();
+                Log.v("wrote", "log");
+            }
+        } catch (Exception e) {
+            Log.v("I/O", "is fucked");
+        }
         index = (index + READ_SIZE)%buffer.length;
 
         if(read_index < 0) find_secret();
