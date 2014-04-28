@@ -18,6 +18,7 @@ public class MainActivity extends ActionBarActivity {
     DrawView drawView;
     TextView text;
     Thread recordThread;
+    public String receivedText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,14 +36,22 @@ public class MainActivity extends ActionBarActivity {
 
         drawView = (DrawView) findViewById(R.id.draw);
         drawView.setBackgroundColor(Color.WHITE);
+        final MainActivity me = this;
 
         recordThread = new Thread(new Runnable(){
                     public void run(){
-                        new Listener(text).listen(drawView);
+                        new Listener(me).listen(drawView);
                     }
                 });
         recordThread.start();
+    }
 
+    public void setText(final String t) {
+        this.text.post(new Runnable() {
+                public void run() {
+                    text.setText(t);
+                }
+            });
     }
 
     @Override

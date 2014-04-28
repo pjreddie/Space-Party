@@ -73,10 +73,10 @@ public class Listener {
 
 
     AudioRecord recorder;
-    TextView text;
+    MainActivity main;
 
-    public Listener(TextView t) {
-        text = t;
+    public Listener(MainActivity m) {
+        main = m;
         Log.v("initializing listener", "wooooo");
         recorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
                                    TRANSMIT_HZ, AudioFormat.CHANNEL_IN_MONO,
@@ -168,7 +168,7 @@ public class Listener {
                 Log.v("Error Rate:", String.format("%f%%",100.*errors/(random_length*8.)));
             }else{
                 Log.v("Message!!:", new String(received_bytes));
-                text.setText(new String(received_bytes));
+                main.setText(new String(received_bytes));
             }
         }
     }
@@ -253,7 +253,7 @@ int log = 0;
         ByteBuffer b = ByteBuffer.allocate(4);
         b.putInt(message.length);
         System.arraycopy(secret.getBytes(), 0, data, 0, secret.length());
-        System.arraycopy(b.array(),0,data,secret.length(),b.array().length);
+        System.arraycopy(b.array(), 0, data, secret.length(), b.array().length);
         System.arraycopy(message, 0, data, 4+secret.length(), message.length);
         return data;
     }
