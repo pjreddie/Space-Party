@@ -30,13 +30,13 @@ public class Listener {
     public static int TRANSMIT_HZ = 44100;
     private static final int RECORDER_BUFFER_SIZE = 5*44100;
 
-    static String secret = "Ha";
+    static String secret = "\0\0UaU";
     static byte[] secret_bits = string_to_bits(secret);
 
     private static final int SAMPLES_PER_BIT = 74;
-    private static final int BYTES_PER_READ = 4*secret_bits.length/8;
+    private static final int BYTES_PER_READ = secret_bits.length/8;
     private static final int BITS_PER_READ = BYTES_PER_READ*8;
-    private static final int BITS_PER_BUFF = BITS_PER_READ*5;
+    private static final int BITS_PER_BUFF = BITS_PER_READ*3;
 
     private static final int BUFFER_SIZE = SAMPLES_PER_BIT*BITS_PER_BUFF;
     private static final int READ_SIZE = SAMPLES_PER_BIT*BITS_PER_READ;
@@ -53,6 +53,9 @@ public class Listener {
     private byte[] decode = new byte[BITS_PER_READ + secret_bits.length];
     private byte[] received_bytes;
 
+    float WAVES_PER_BIT = Math.max(MARK_CROSS, SPACE_CROSS);
+    float SAMPLES_PER_WAVE = SAMPLES_PER_BIT/WAVES_PER_BIT;
+    int INCR = (int) SAMPLES_PER_WAVE/4;
 
     private int index = 0;
     private int read_index = -1;
@@ -86,7 +89,7 @@ public class Listener {
         int sum = 0;
         int count = 0;
 
-        for(int offset = 0; offset < SAMPLES_PER_BIT; offset += SAMPLES_PER_BIT/20){
+        for(int offset = 0; offset < SAMPLES_PER_BIT; offset += 2){
             int start_index = index - decode.length*SAMPLES_PER_BIT + offset;
             for(int i = 0; i < decode.length; ++i){
                 decode[i] = decode(start_index+i*SAMPLES_PER_BIT);
@@ -193,20 +196,16 @@ Random r = new Random();
         if(read_index < 0) find_secret();
         else if(read_left <= 0) read_header();
         else read_message();
-
-        //drawView.postInvalidate();
     }
 
 int log = 0;
     private byte decode(int index)
     {
         int count = 0;
-        float waves_per_bit = Math.max(MARK_CROSS, SPACE_CROSS);
-        float samples_per_wave = SAMPLES_PER_BIT/waves_per_bit;
-        int incr = (int) samples_per_wave/4;
+
         //Log.v("ing", String.valueOf(incr));
-        for(int i = index; i < index+SAMPLES_PER_BIT; i += incr){
-            if((buffer[(i-incr+2*buffer.length)%buffer.length]<0) != (buffer[(i+2*buffer.length)%buffer.length]<0)) ++count;
+        for(int i = index; i < index+SAMPLES_PER_BIT; i += INCR){
+            if((buffer[(i-INCR+2*buffer.length)%buffer.length]<0) != (buffer[(i+2*buffer.length)%buffer.length]<0)) ++count;
         }
 
         //Log.v("Crossings", String.valueOf(count));
@@ -278,7 +277,6 @@ int log = 0;
         }
         return wave;
     }
-    AudioTrack audioTrack;
     short[] send_message(byte[] s){
         byte code[] = encode(s);
         short wave[] = bell202_modulate(code);
