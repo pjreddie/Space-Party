@@ -7,8 +7,8 @@
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
         <option name="modules">
           <set>
-            <option value="$USER_HOME$/Dropbox/notes/uw/Space-Party/SpaceParty-Receiver" />
-            <option value="$USER_HOME$/Dropbox/notes/uw/Space-Party/SpaceParty-Receiver/SpaceParty-Receiver" />
+            <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/SpaceParty-Receiver" />
           </set>
         </option>
       </GradleProjectSettings>

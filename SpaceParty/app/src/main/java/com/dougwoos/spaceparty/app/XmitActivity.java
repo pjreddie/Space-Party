@@ -23,9 +23,9 @@ import java.util.Random;
 
 public class XmitActivity extends ActionBarActivity {
     public int TRANSMIT_HZ = 44100;
-    public int SAMPLES_PER_BIT=296;
+    public int SAMPLES_PER_BIT=74;
 
-    String secret = "UaU";
+    String secret = "Ha";
 
     int min_buff = AudioTrack.getMinBufferSize(TRANSMIT_HZ,
             AudioFormat.CHANNEL_OUT_MONO,
@@ -81,7 +81,7 @@ public class XmitActivity extends ActionBarActivity {
     void send_message(byte[] s){
         byte code[] = encode(s);
         short wave[] = bell202_modulate(code);
-
+        Log.v("Wave", Arrays.toString(wave));
 
         audioTrack.play();
         for(int i = 0; i < wave.length; i += 5*min_buff){
@@ -89,8 +89,8 @@ public class XmitActivity extends ActionBarActivity {
             audioTrack.write(wave, i, len);
         }
         audioTrack.stop();
-
     }
+
     Button button;
     EditText text;
     @Override

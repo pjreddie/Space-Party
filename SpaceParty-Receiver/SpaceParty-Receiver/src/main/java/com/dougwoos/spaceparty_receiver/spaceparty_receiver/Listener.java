@@ -1,10 +1,15 @@
 package com.dougwoos.spaceparty_receiver.spaceparty_receiver;
 
+import android.annotation.TargetApi;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
+import android.media.AudioTrack;
 import android.media.MediaRecorder;
+import android.os.Build;
 import android.util.Log;
 
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Random;
 
 
@@ -25,11 +30,11 @@ public class Listener {
     public static int TRANSMIT_HZ = 44100;
     private static final int RECORDER_BUFFER_SIZE = 5*44100;
 
-    static String secret = "UaU";
+    static String secret = "Ha";
     static byte[] secret_bits = string_to_bits(secret);
 
-    private static final int SAMPLES_PER_BIT = 296;
-    private static final int BYTES_PER_READ = secret_bits.length/8;
+    private static final int SAMPLES_PER_BIT = 74;
+    private static final int BYTES_PER_READ = 4*secret_bits.length/8;
     private static final int BITS_PER_READ = BYTES_PER_READ*8;
     private static final int BITS_PER_BUFF = BITS_PER_READ*5;
 
@@ -81,9 +86,9 @@ public class Listener {
         int sum = 0;
         int count = 0;
 
-        for(int offset = 0; offset < SAMPLES_PER_BIT; offset++){
-            int start_index = index - READ_SIZE - (secret_bits.length * SAMPLES_PER_BIT) + offset;
-            for(int i = 0; i < BITS_PER_READ + secret_bits.length; ++i){
+        for(int offset = 0; offset < SAMPLES_PER_BIT; offset += SAMPLES_PER_BIT/20){
+            int start_index = index - decode.length*SAMPLES_PER_BIT + offset;
+            for(int i = 0; i < decode.length; ++i){
                 decode[i] = decode(start_index+i*SAMPLES_PER_BIT);
             }
 
@@ -160,7 +165,27 @@ public class Listener {
             }
         }
     }
+    /*
+Random r = new Random();
+    private void poll() {
+        //recorder.read(buffer, index, READ_SIZE);
+        index = (index + READ_SIZE)%buffer.length;
 
+        short[] wave = send_message("Hello".getBytes());
+        int offset = Math.abs(r.nextInt())%(buffer.length - wave.length);
+
+        if(read_index < 0){
+            index = offset+READ_SIZE+2000;
+            System.arraycopy(wave, 0, buffer, offset, wave.length);
+            find_secret();
+            if(read_index < 0) Log.v("Offset", String.valueOf(offset));
+        }
+        else if(read_left <= 0) read_header();
+        else read_message();
+
+
+        //drawView.postInvalidate();
+    }*/
     private void poll() {
         recorder.read(buffer, index, READ_SIZE);
         index = (index + READ_SIZE)%buffer.length;
@@ -171,16 +196,21 @@ public class Listener {
 
         //drawView.postInvalidate();
     }
+
 int log = 0;
     private byte decode(int index)
     {
         int count = 0;
-        for(int i = index; i < index+SAMPLES_PER_BIT; ++i){
-            if((buffer[(i-1+2*buffer.length)%buffer.length]<0) != (buffer[(i+2*buffer.length)%buffer.length]<0)) ++count;
+        float waves_per_bit = Math.max(MARK_CROSS, SPACE_CROSS);
+        float samples_per_wave = SAMPLES_PER_BIT/waves_per_bit;
+        int incr = (int) samples_per_wave/4;
+        //Log.v("ing", String.valueOf(incr));
+        for(int i = index; i < index+SAMPLES_PER_BIT; i += incr){
+            if((buffer[(i-incr+2*buffer.length)%buffer.length]<0) != (buffer[(i+2*buffer.length)%buffer.length]<0)) ++count;
         }
-        if(++log%100000 == 0){
-            Log.v("Crossings", String.valueOf(count));
-        }
+
+        //Log.v("Crossings", String.valueOf(count));
+
         if(Math.abs(count-MARK_CROSS) < Math.abs(count-SPACE_CROSS)){
             return 1;
         }else{
@@ -212,6 +242,47 @@ int log = 0;
                 //Log.v("Found Preamble", String.valueOf(preambleIndex));
             }
             // cool, now we have a transmission.
+    }
+
+    @TargetApi(Build.VERSION_CODES.KITKAT)
+    public byte[] encode(byte[] message){
+        byte[] data = new byte[secret.length() + message.length + 4];
+        ByteBuffer b = ByteBuffer.allocate(4);
+        b.putInt(message.length);
+        System.arraycopy(secret.getBytes(), 0, data, 0, secret.length());
+        System.arraycopy(b.array(),0,data,secret.length(),b.array().length);
+        System.arraycopy(message, 0, data, 4+secret.length(), message.length);
+        return data;
+    }
+
+    public short[] bell202_modulate(byte[] data){
+        double mark_hz = 1200;
+        double space_hz = 2400;
+
+        short[] wave = new short[data.length*8*SAMPLES_PER_BIT];
+        int count = 0;
+
+        double t = 0;
+        for(int i = 0; i < data.length; ++i){
+            byte b = data[i];
+            for(int j = 7; j >= 0; --j){
+                int bit = (b >> j) & 1;
+                for(int k = 0; k < SAMPLES_PER_BIT; ++k){
+                    double step = 1./TRANSMIT_HZ;
+                    if(bit == 1) step *= mark_hz;
+                    else step *= space_hz;
+                    t += step;
+                    wave[count++] = (short)(Math.sin(t*Math.PI*2)*Short.MAX_VALUE);
+                }
+            }
+        }
+        return wave;
+    }
+    AudioTrack audioTrack;
+    short[] send_message(byte[] s){
+        byte code[] = encode(s);
+        short wave[] = bell202_modulate(code);
+        return wave;
     }
 
 
