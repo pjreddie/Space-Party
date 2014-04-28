@@ -38,7 +38,7 @@ public class MainActivity extends ActionBarActivity {
 
         recordThread = new Thread(new Runnable(){
                     public void run(){
-                        new Listener().listen(drawView);
+                        new Listener(text).listen(drawView);
                     }
                 });
         recordThread.start();

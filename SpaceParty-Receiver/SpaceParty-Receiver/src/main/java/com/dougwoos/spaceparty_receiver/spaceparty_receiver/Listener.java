@@ -7,6 +7,7 @@ import android.media.AudioTrack;
 import android.media.MediaRecorder;
 import android.os.Build;
 import android.util.Log;
+import android.widget.TextView;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -72,8 +73,10 @@ public class Listener {
 
 
     AudioRecord recorder;
+    TextView text;
 
-    public Listener() {
+    public Listener(TextView t) {
+        text = t;
         Log.v("initializing listener", "wooooo");
         recorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
                                    TRANSMIT_HZ, AudioFormat.CHANNEL_IN_MONO,
@@ -83,7 +86,7 @@ public class Listener {
                                                                          AudioFormat.ENCODING_PCM_16BIT)));
     }
 
-        void find_secret(){
+    void find_secret(){
 
         read_left = -1;
         int sum = 0;
@@ -165,6 +168,7 @@ public class Listener {
                 Log.v("Error Rate:", String.format("%f%%",100.*errors/(random_length*8.)));
             }else{
                 Log.v("Message!!:", new String(received_bytes));
+                text.setText(new String(received_bytes));
             }
         }
     }
