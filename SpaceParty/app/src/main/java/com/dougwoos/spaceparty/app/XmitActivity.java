@@ -23,7 +23,7 @@ import java.util.Random;
 
 public class XmitActivity extends ActionBarActivity {
     public int TRANSMIT_HZ = 44100;
-    public int SAMPLES_PER_BIT=74;
+    public int SAMPLES_PER_BIT=296;
 
     String secret = "UaU";
 
@@ -95,6 +95,7 @@ public class XmitActivity extends ActionBarActivity {
     EditText text;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.v("Samples", String.valueOf(SAMPLES_PER_BIT));
         audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, TRANSMIT_HZ,
                 AudioFormat.CHANNEL_OUT_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
