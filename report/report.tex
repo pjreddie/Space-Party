@@ -54,14 +54,30 @@ We first tried to maximize our bitrate by reducing the symbols per
 bit. When we held the phones directly adjacent to each other, we could
 transmit with 37 symbols per bit, yielding a bitrate of 1192 bps with
 an error rate of approximately 1~\%. However, we could not transmit
-over any significant distance at this bitrate. For all subsequent
-experiments, we transmitted 74 symbols per bit for a bitrate of 600
-bps.
+over any significant distance at this bitrate (we got a bit error rate
+of just over 2~\% t 10cm). For the subsequent experiments, we
+transmitted 74 symbols per bit for a bitrate of 600 bps.
 
 For the distance experiments, we transmitted 1KB of randomly generated
 data (using a consistent seed for repeatability and error detection)
 from one phone to the other while varying the distance. We repeated
 each experiment 10 times, and we report both the average and the
 standard deviation. Our results are in
-Figure~\ref{fig:distance_results}.
+Figure~\ref{fig:distance_results}. Note that in several runs at larger
+distances, the receiving phone failed to detect the preamble; we
+counted this as 100~\% error rate (this accounts for the extremely
+high variance at 40 and 60 cm).
+
+At 30cm and 50cm, the bit error rate is under 2~\% (0.3~\% and 1.9~\%,
+respectively). However, at 40cm a preamble-detection failure occurs.
+
+\begin{figure}[h!]
+  \label{fig:distance_results}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figure.pdf}
+  \caption{Bit error rate by distance. The points on the graph
+    indicate mean error rate over 10 runs, while the bars indicate the
+  standard deviation.}
+
+\end{figure}
 \end{document}
