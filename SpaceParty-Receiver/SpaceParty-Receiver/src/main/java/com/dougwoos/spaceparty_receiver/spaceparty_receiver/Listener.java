@@ -35,7 +35,7 @@ public class Listener {
     static byte[] secret_bits = string_to_bits(secret);
 
 
-    private static final int SAMPLES_PER_BIT = 74;
+    private static final int SAMPLES_PER_BIT = 36;
     private static final int BYTES_PER_READ = Math.max(3*secret_bits.length/8, 5*4);
     private static final int BITS_PER_READ = BYTES_PER_READ*8;
     private static final int BITS_PER_BUFF = BITS_PER_READ*3;

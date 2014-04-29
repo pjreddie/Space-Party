@@ -23,7 +23,7 @@ import java.util.Random;
 
 public class XmitActivity extends ActionBarActivity {
     public int TRANSMIT_HZ = 44100;
-    public int SAMPLES_PER_BIT=74;
+    public int SAMPLES_PER_BIT=36;
 
     String secret = "\0\0\0\0\0\0\0\0UaU";
 
