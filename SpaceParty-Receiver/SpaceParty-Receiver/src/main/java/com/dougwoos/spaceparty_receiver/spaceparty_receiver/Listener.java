@@ -92,9 +92,10 @@ public class Listener {
     void find_secret(){
 
         read_left = -1;
-        int found = -1;
+        int sum = 0;
+        int count = 0;
 
-        for(int offset = 0; offset < SAMPLES_PER_BIT && found < 0; offset += SAMPLES_PER_BIT/30){
+        for(int offset = 0; offset < SAMPLES_PER_BIT; offset += 2){
             int start_index = index - decode.length*SAMPLES_PER_BIT + offset;
             for(int i = 0; i < decode.length; ++i){
                 decode[i] = decode(start_index+i*SAMPLES_PER_BIT);
@@ -109,32 +110,15 @@ public class Listener {
                     }
                 }
                 if (match==1){
-                    found = i*SAMPLES_PER_BIT + start_index;
+                    int next = i*SAMPLES_PER_BIT + start_index;
+                    if(count == 0 || Math.abs(sum/count-next) < SAMPLES_PER_BIT){
+                        sum += next;
+                        ++count;
+                    }
                 }
             }
         }
-
-        if (found > 0) {
-            int count = 0;
-            int sum = 0;
-            for (int offset = -SAMPLES_PER_BIT / 2; offset < SAMPLES_PER_BIT; ++offset) {
-                int start_index = found + offset;
-                for (int i = 0; i < secret_bits.length; ++i) {
-                    decode[i] = decode(start_index + i * SAMPLES_PER_BIT);
-                }
-                int match = 1;
-
-                for (int j = 0; j < secret_bits.length; ++j) {
-                    if (decode[j] != secret_bits[j]) {
-                        match = 0;
-                        break;
-                    }
-                }
-                if (match == 1) {
-                    sum += start_index;
-                    ++count;
-                }
-            }
+        if(count > 0) {
             Log.v("Count:", String.valueOf(count));
             read_index = (sum/count + secret_bits.length*SAMPLES_PER_BIT + BUFFER_SIZE)%BUFFER_SIZE;
         }
@@ -192,7 +176,7 @@ public class Listener {
                     int diff = ((received_bytes[i]&0xff)^(random_bytes[i]&0xff));
                     errors += Integer.bitCount(diff);
                 }
-                Log.v("Error Rate:", String.format("%f%%",100.*errors/(random_length*8.)));
+                Log.v("Error Rate:", String.format("%f",errors/(random_length*8.)));
             }else{
                 Log.v("Message!!:", new String(received_bytes));
                 main.setText(new String(received_bytes));
