@@ -25,7 +25,7 @@ public class XmitActivity extends ActionBarActivity {
     public int TRANSMIT_HZ = 44100;
     public int SAMPLES_PER_BIT=74;
 
-    String secret = "\0\0\0\0\0\0\0\0\0UaU";
+    String secret = "\0\0\0\0\0\0\0\0UaU";
 
     int min_buff = AudioTrack.getMinBufferSize(TRANSMIT_HZ,
             AudioFormat.CHANNEL_OUT_MONO,
@@ -45,18 +45,26 @@ public class XmitActivity extends ActionBarActivity {
 
     @TargetApi(Build.VERSION_CODES.KITKAT)
     public byte[] encode(byte[] message){
-        byte[] data = new byte[secret.length() + message.length + 4];
-        ByteBuffer b = ByteBuffer.allocate(4);
+        ByteBuffer b = ByteBuffer.allocate(20);
         b.putInt(message.length);
+        b.putInt(message.length);
+        b.putInt(message.length);
+        b.putInt(message.length);
+        b.putInt(message.length);
+        byte[] header = b.array();
+
+        byte[] data = new byte[secret.length() + message.length + header.length];
+
         System.arraycopy(secret.getBytes(), 0, data, 0, secret.length());
-        System.arraycopy(b.array(),0,data,secret.length(),b.array().length);
-        System.arraycopy(message, 0, data, 4+secret.length(), message.length);
+        System.arraycopy(header,0,data,secret.length(),header.length);
+        System.arraycopy(message, 0, data, header.length + secret.length(), message.length);
+        Log.v("Sending", Arrays.toString(data));
         return data;
     }
 
     public short[] bell202_modulate(byte[] data){
         double mark_hz = 1200;
-        double space_hz = 2400;
+        double space_hz = 2200;
 
         short[] wave = new short[data.length*8*SAMPLES_PER_BIT];
         int count = 0;

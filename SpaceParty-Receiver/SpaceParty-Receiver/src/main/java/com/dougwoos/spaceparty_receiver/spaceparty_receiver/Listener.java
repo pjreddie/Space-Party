@@ -31,11 +31,12 @@ public class Listener {
     public static int TRANSMIT_HZ = 44100;
     private static final int RECORDER_BUFFER_SIZE = 5*44100;
 
-    static String secret = "\0\0UaU";
+    static String secret = "UaU";
     static byte[] secret_bits = string_to_bits(secret);
 
+
     private static final int SAMPLES_PER_BIT = 74;
-    private static final int BYTES_PER_READ = secret_bits.length/8;
+    private static final int BYTES_PER_READ = Math.max(3*secret_bits.length/8, 5*4);
     private static final int BITS_PER_READ = BYTES_PER_READ*8;
     private static final int BITS_PER_BUFF = BITS_PER_READ*3;
 
@@ -43,7 +44,7 @@ public class Listener {
     private static final int READ_SIZE = SAMPLES_PER_BIT*BITS_PER_READ;
 
     private static final int MARK_HZ = 1200;
-    private static final int SPACE_HZ = 2400;
+    private static final int SPACE_HZ = 2200;
     int read_left = -1;
 
     private static final float MARK_CROSS = 2.0f*MARK_HZ*SAMPLES_PER_BIT/TRANSMIT_HZ;
@@ -60,6 +61,8 @@ public class Listener {
 
     private int index = 0;
     private int read_index = -1;
+    int[] lens = new int[5];
+
 
     public byte[] random_bytes(int len){
         Random r = new Random(0);
@@ -89,10 +92,9 @@ public class Listener {
     void find_secret(){
 
         read_left = -1;
-        int sum = 0;
-        int count = 0;
+        int found = -1;
 
-        for(int offset = 0; offset < SAMPLES_PER_BIT; offset += 2){
+        for(int offset = 0; offset < SAMPLES_PER_BIT && found < 0; offset += SAMPLES_PER_BIT/30){
             int start_index = index - decode.length*SAMPLES_PER_BIT + offset;
             for(int i = 0; i < decode.length; ++i){
                 decode[i] = decode(start_index+i*SAMPLES_PER_BIT);
@@ -107,34 +109,59 @@ public class Listener {
                     }
                 }
                 if (match==1){
-                    int next = i*SAMPLES_PER_BIT + start_index;
-                    if(count == 0 || Math.abs(sum/count-next) < SAMPLES_PER_BIT){
-                        sum += next;
-                        ++count;
-                    }
+                    found = i*SAMPLES_PER_BIT + start_index;
                 }
             }
         }
-        if(count > 0) {
+
+        if (found > 0) {
+            int count = 0;
+            int sum = 0;
+            for (int offset = -SAMPLES_PER_BIT / 2; offset < SAMPLES_PER_BIT; ++offset) {
+                int start_index = found + offset;
+                for (int i = 0; i < secret_bits.length; ++i) {
+                    decode[i] = decode(start_index + i * SAMPLES_PER_BIT);
+                }
+                int match = 1;
+
+                for (int j = 0; j < secret_bits.length; ++j) {
+                    if (decode[j] != secret_bits[j]) {
+                        match = 0;
+                        break;
+                    }
+                }
+                if (match == 1) {
+                    sum += start_index;
+                    ++count;
+                }
+            }
             Log.v("Count:", String.valueOf(count));
             read_index = (sum/count + secret_bits.length*SAMPLES_PER_BIT + BUFFER_SIZE)%BUFFER_SIZE;
         }
     }
 
     void read_header(){
-        String s = "";
-        for(int i = 0; i < 8*4; ++i){
-            short bit = decode(read_index);
-            read_index += SAMPLES_PER_BIT;
-            if(bit == 1)s += "1";
-            else s +="0";
+        for(int k = 0 ; k < 5; ++k){
+            String s = "";
+            for(int i = 0; i < 8*4; ++i){
+                short bit = decode(read_index);
+                read_index += SAMPLES_PER_BIT;
+                if(bit == 1)s += "1";
+                else s +="0";
+            }
+            if(s.charAt(0) == '1'){
+                Log.v("Rejecting", "Malformed or Too Long!");
+            }else{
+                lens[k] = Integer.parseInt(s, 2);
+                Log.v("Length", String.valueOf(lens[k]));
+            }
+            Log.v("Bits", s);
         }
-        if(s.charAt(0) == '1' || Integer.parseInt(s,2) > 1000000){
-            Log.v("Rejecting", "Malformed or Too Long!");
-            read_index = -1;
-            return;
-        }
-        read_left = Integer.parseInt(s, 2);
+
+        Arrays.sort(lens);
+        read_left = lens[2];
+        Log.v("lengths:", Arrays.toString(lens));
+
         Log.v("Message Length", String.valueOf(read_left));
         received_bytes = new byte[read_left];
     }
@@ -203,6 +230,7 @@ Random r = new Random();
     }
 
 int log = 0;
+
     private byte decode(int index)
     {
         int count = 0;
